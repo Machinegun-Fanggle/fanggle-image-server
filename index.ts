@@ -3,12 +3,12 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import fs from 'node:fs/promises';
 import normalFs from 'node:fs';
-import { createLogger } from './src/service/logger';
 import multer from 'fastify-multer';
-import { config } from 'dotenv';
-import multerFactory from "./src/config/multerFactory";
+import httpStatus from 'http-status';
 
-config();
+import multerFactory from './src/config/multerFactory';
+import { createLogger } from './src/service/logger';
+
 (async () => {
   const exists = await new Promise(resolve =>
     normalFs.access('./log', err => {
@@ -54,7 +54,7 @@ server.post('/upload', {
     description: '단일 파일 업로드를 수행합니다.',
     summary: '단일 파일 업로드 API',
     response: {
-      201: {
+      [httpStatus.CREATED]: {
         description: '파일 업로드 성공',
         type: 'object',
         properties: {
@@ -64,11 +64,11 @@ server.post('/upload', {
     }
   }
 }, async (req, res) => {
-  const file = (req as any).file as File & { location: string };
+  const fileDetails = (req as any).file as File & { location: string };
 
   return res
-    .status(201)
-    .serialize({ url: file.location });
+    .status(httpStatus.CREATED)
+    .serialize(fileDetails);
 });
 
 server.listen({ path: 'localhost', port: 8880 }, (err, address) => {
