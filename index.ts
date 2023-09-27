@@ -4,15 +4,23 @@ import swaggerUi from '@fastify/swagger-ui';
 import fs from 'node:fs/promises';
 import normalFs from 'node:fs';
 import { createLogger } from './src/service/logger';
-import { S3Client } from "@aws-sdk/client-s3";
 import multer from 'fastify-multer';
-import type { Multer} from 'multer';
-import multerS3 from 'multer-s3';
 import { config } from 'dotenv';
+import multerFactory from "./src/config/multerFactory";
 
 config();
+(async () => {
+  const exists = await new Promise(resolve =>
+    normalFs.access('./log', err => {
+      if (err) return resolve(false);
+      return resolve(true);
+    }));
+
+  if (!exists) await fs.mkdir('./log');
+})();
 
 const runLogger = createLogger('application-runner');
+const uploader = multerFactory();
 
 const server = Fastify({
   logger: {
@@ -36,42 +44,8 @@ server.register(swaggerUi, {
   transformStaticCSP: (header) => header,
   transformSpecification: (swaggerObject, request, reply) => { return swaggerObject },
   transformSpecificationClone: true
-})
-
-const accessKeyId = process.env.S3_ACCESS_KEY;
-const secretAccessKey = process.env.S3_SECRET_KEY;
-console.log({ accessKeyId, secretAccessKey });
-const s3 = new S3Client({
-  region: 'ap-northeast-2',
-  credentials: {
-    accessKeyId,
-    secretAccessKey,
-  },
 });
 
-const uploader = multer({
-  storage: multerS3({
-    s3,
-    bucket: 'machinegunsoft',
-    acl: 'public-read-write',
-    key: (req, file, cb) => {
-      cb(null, file.originalname + new Date().toISOString());
-    },
-  }) as any,
-  limits: {
-    fileSize: 100 * 1024 * 1024,
-  },
-});
-
-(async () => {
-  const exists = await new Promise(resolve =>
-    normalFs.access('./log', err => {
-      if (err) return resolve(false);
-      return resolve(true);
-    }));
-
-  if (!exists) await fs.mkdir('./log');
-})();
 
 server.post('/upload', {
   preHandler: uploader.single('file'),

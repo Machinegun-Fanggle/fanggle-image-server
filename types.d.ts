@@ -1,8 +1,10 @@
 import { File } from 'fastify-multer/lib/interfaces';
 
+type ApplicationFile  = File & { location: string };
+
 declare module 'fastify' {
   interface FastifyRequest {
-    file: File;
-    files: File[];
+    file: ApplicationFile;
+    files: ApplicationFile[];
   }
 }
