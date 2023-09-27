@@ -6,6 +6,7 @@ import normalFs from 'node:fs';
 import { createLogger } from './src/service/logger';
 import { S3Client } from "@aws-sdk/client-s3";
 import multer from 'fastify-multer';
+import type { Multer} from 'multer';
 import multerS3 from 'multer-s3';
 import { config } from 'dotenv';
 
@@ -13,7 +14,12 @@ config();
 
 const runLogger = createLogger('application-runner');
 
-const server = Fastify();
+const server = Fastify({
+  logger: {
+    level: 'debug',
+    enabled: true,
+  },
+});
 
 server.register(multer.contentParser);
 server.register(swagger);
@@ -32,7 +38,16 @@ server.register(swaggerUi, {
   transformSpecificationClone: true
 })
 
-const s3 = new S3Client();
+const accessKeyId = process.env.S3_ACCESS_KEY;
+const secretAccessKey = process.env.S3_SECRET_KEY;
+console.log({ accessKeyId, secretAccessKey });
+const s3 = new S3Client({
+  region: 'ap-northeast-2',
+  credentials: {
+    accessKeyId,
+    secretAccessKey,
+  },
+});
 
 const uploader = multer({
   storage: multerS3({
@@ -61,10 +76,9 @@ const uploader = multer({
 server.post('/upload', {
   preHandler: uploader.single('file'),
   schema: {
+    consumes: ['multipart/form-data'],
     description: '단일 파일 업로드를 수행합니다.',
     summary: '단일 파일 업로드 API',
-    body: {
-    },
     response: {
       201: {
         description: '파일 업로드 성공',
@@ -76,10 +90,11 @@ server.post('/upload', {
     }
   }
 }, async (req, res) => {
+  const file = (req as any).file as File & { location: string };
 
   return res
     .status(201)
-    .serialize({ url: '' });
+    .serialize({ url: file.location });
 });
 
 server.listen({ path: 'localhost', port: 8880 }, (err, address) => {

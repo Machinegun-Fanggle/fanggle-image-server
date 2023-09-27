@@ -9,15 +9,15 @@ type ExtendedLoggerOptions = LoggerOptions & {
 /**
  * @description Logger 객체를 생성합니다.
  */
-export const createLogger = (name: string, option: ExtendedLoggerOptions): Logger => winston.createLogger({
+export const createLogger = (name: string, option?: ExtendedLoggerOptions): Logger => winston.createLogger({
   defaultMeta: { name },
   exitOnError: false,
   transports: [
     new winston.transports.Console(),
-    option.writeFile && new winston.transports.File({
-      dirname: path.resolve(__dirname, 'logs'),
-      filename: getNodeEnv() === NodeEnvVariables.DEV ? 'application.log' : 'error.log',
-    }),
+    // option?.writeFile && new winston.transports.File({
+    //   dirname: path.resolve(__dirname, 'logs'),
+    //   filename: getNodeEnv() === NodeEnvVariables.DEV ? 'application.log' : 'error.log',
+    // }),
   ],
   ...option,
 });
