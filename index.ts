@@ -5,9 +5,12 @@ import fs from 'node:fs/promises';
 import normalFs from 'node:fs';
 import multer from 'fastify-multer';
 import httpStatus from 'http-status';
+import { config } from 'dotenv';
+config();
 
 import multerFactory from './src/config/multerFactory';
 import { createLogger } from './src/service/logger';
+import pinoEnvLogger from "./src/config/pinoEnvLogger";
 
 (async () => {
   const exists = await new Promise(resolve =>
@@ -23,10 +26,7 @@ const runLogger = createLogger('application-runner');
 const uploader = multerFactory();
 
 const server = Fastify({
-  logger: {
-    level: 'debug',
-    enabled: true,
-  },
+  logger: pinoEnvLogger[process.env.NODE_ENV],
 });
 
 server.register(multer.contentParser);
