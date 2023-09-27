@@ -1,4 +1,6 @@
 import Fastify from 'fastify';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import fs from 'node:fs/promises';
 import normalFs from 'node:fs';
 import { createLogger } from './src/service/logger';
@@ -14,6 +16,21 @@ const runLogger = createLogger('application-runner');
 const server = Fastify();
 
 server.register(multer.contentParser);
+server.register(swagger);
+server.register(swaggerUi, {
+  routePrefix: '/docs',
+  uiConfig: {
+    docExpansion: 'full',
+  },
+  staticCSP: true,
+  uiHooks: {
+    onRequest: function (request, reply, next) { next() },
+    preHandler: function (request, reply, next) { next() }
+  },
+  transformStaticCSP: (header) => header,
+  transformSpecification: (swaggerObject, request, reply) => { return swaggerObject },
+  transformSpecificationClone: true
+})
 
 const s3 = new S3Client();
 
@@ -21,6 +38,7 @@ const uploader = multer({
   storage: multerS3({
     s3,
     bucket: 'machinegunsoft',
+    acl: 'public-read-write',
     key: (req, file, cb) => {
       cb(null, file.originalname + new Date().toISOString());
     },
@@ -42,10 +60,27 @@ const uploader = multer({
 
 server.post('/upload', {
   preHandler: uploader.single('file'),
+  schema: {
+    description: '단일 파일 업로드를 수행합니다.',
+    summary: '단일 파일 업로드 API',
+    body: {
+    },
+    response: {
+      201: {
+        description: '파일 업로드 성공',
+        type: 'object',
+        properties: {
+          url: { type: 'string' }
+        }
+      }
+    }
+  }
 }, async (req, res) => {
-  return res.status(200).send();
-});
 
+  return res
+    .status(201)
+    .serialize({ url: '' });
+});
 
 server.listen({ path: 'localhost', port: 8880 }, (err, address) => {
   runLogger.info(`Server Runned On ${address}`);
